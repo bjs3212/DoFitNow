@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+RESOL = 10.0 ** (4) # 10 ** (N) 은 각 parameter에 N개의 소수점을 포함하겠다는 뜻
+
 import sys
 import numpy as np
 from PyQt5 import QtWidgets, uic
@@ -18,7 +20,7 @@ def local_drude_sigma(w, sigma_drude, g, C) :
 class App(QtWidgets.QMainWindow):
     # 추가할 것 : 메뉴 바, 각 윈도우(Fit, Plot, Model 등) 여는 버튼, 파일 업로드 기능
     tableClicked = pyqtSignal(float)
-    sliderChanged = pyqtSignal(int)
+    sliderMoved = pyqtSignal(int)
     
     def __init__(self):
         super().__init__()
@@ -33,15 +35,15 @@ class App(QtWidgets.QMainWindow):
         self.ParAdjust = ParAdjust(self)
 
     def open_model_window(self):
-        ParTable_ = ParTable(self)  # 새 창 인스턴스 생성
-        ParTable_.show()         # 새 창 보여주기
+        ParTable_ = ParTable(self)
+        ParTable_.show()
         self.models.append(ParTable_)
         
         self.ParAdjust.show()
     
     def open_plot_window(self):
-        PlotWindow_ = PlotWindow(self)  # 새 창 인스턴스 생성
-        PlotWindow_.show()         # 새 창 보여주기
+        PlotWindow_ = PlotWindow(self)
+        PlotWindow_.show()
         self.models.append(PlotWindow_)
 
 # Fit에 필요한 변수들을 저장할 Table
@@ -62,7 +64,7 @@ class ParTable(QtWidgets.QMainWindow):
         self.table.setItem(0,2, QTableWidgetItem(f"{self.parameters[0][2]:0.2f}"))
         
         self.table.cellClicked.connect(self.cell_clicked)
-        self.main.sliderChanged.connect(self.update_cell_value)
+        self.main.sliderMoved.connect(self.update_cell_value)
 
     def cell_clicked(self, row, column):
         # 클릭된 셀의 값을 가져옵니다.
@@ -74,7 +76,7 @@ class ParTable(QtWidgets.QMainWindow):
         # 현재 선택된 셀의 값을 업데이트
         current_item = self.table.currentItem()
         if current_item:
-            value = value/10000.0
+            value = value/RESOL
             row, column = self.rowcolumn
             self.parameters[row][column]=value
             current_item.setText(str(f"{value:0.2f}"))
@@ -88,35 +90,33 @@ class ParAdjust(QtWidgets.QMainWindow):
         self.main = main
         uic.loadUi('./ui/ParAdjust.ui', self)
         self.slider = self.findChild(QtWidgets.QSlider, 'ParAdjust_Slider')
-        self.slider.valueChanged.connect(self.slider_value_changed)
+        self.slider.sliderMoved.connect(self.slider_moved)
         self.slider.sliderReleased.connect(self.on_slider_released)
         self.main.tableClicked.connect(self.set_slider_Value)
 
     def on_slider_released(self):
         value = self.slider.value()
         if value == 0 :
-            self.slider.setMinimum(-10000)
-            self.slider.setMaximum(10000)
+            self.slider.setMinimum(-int(RESOL))
+            self.slider.setMaximum(int(RESOL))
         else :
-            self.slider.setMinimum(int(value*0.8))
-            self.slider.setMaximum(int(value*1.2))
-        self.main.sliderChanged.emit(value)
+            self.slider.setMinimum(int(value-(abs(value)*0.2)))
+            self.slider.setMaximum(int(value+(abs(value)*0.2)))
+        self.main.sliderMoved.emit(value)
         
-    def slider_value_changed(self, value):
-        self.main.sliderChanged.emit(value)
+    def slider_moved(self, value):
+        self.main.sliderMoved.emit(value)
     
     def set_slider_Value(self, value):
-        value = int(value*10000) # Resolution : 소수점 4째 자리까지 본다. slider가 int밖에 조절 못하므로 int로 변환
-        self.slider.setValue(value)
+        value = int(value*RESOL) # Resolution : 소수점 4째 자리까지 본다. slider가 int밖에 조절 못하므로 int로 변환
         if value == 0 :
-            self.slider.setMinimum(-10000)
-            self.slider.setMaximum(10000)
+            self.slider.setMinimum(-int(RESOL))
+            self.slider.setMaximum(int(RESOL))
         else :
-            self.slider.setMinimum(int(value*0.8))
-            self.slider.setMaximum(int(value*1.2))
-        
-    def update_table(self,value):
-        self.main.sliderChanged.emit(value)
+            self.slider.setMinimum(int(value-(abs(value)*0.2)))
+            self.slider.setMaximum(int(value+(abs(value)*0.2)))
+        self.slider.setValue(value)
+        print("minmax updated min:", int(value-(abs(value)*0.2))/RESOL, ".... value :",self.slider.value())
         
         
 class PlotWindow(QtWidgets.QMainWindow):
