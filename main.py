@@ -4,6 +4,7 @@ RESOL = 10.0 ** (4) # 10 ** (N) 은 각 parameter에 N개의 소수점을 포함
 
 import sys
 import numpy as np
+import pandas as pd
 from PyQt5 import QtWidgets, uic
 from PyQt5.QtWidgets import QTableWidgetItem
 from PyQt5.QtCore import pyqtSignal, Qt
@@ -27,11 +28,14 @@ class App(QtWidgets.QMainWindow):
         uic.loadUi('./ui/dfn.ui', self)
         self.modelButton = self.findChild(QtWidgets.QPushButton, 'modelButton')
         self.plotButton = self.findChild(QtWidgets.QPushButton, 'plotButton')
+        self.uploadButton = self.findChild(QtWidgets.QPushButton, 'uploadButton')
         self.modelButton.clicked.connect(self.open_model_window)
         self.plotButton.clicked.connect(self.open_plot_window)
+        self.uploadButton.clicked.connect(self.uploadDataFile)
         
         self.models = []
         self.plots = []
+        self.datas = []
         self.ParAdjust = ParAdjust(self)
 
     def open_model_window(self):
@@ -45,7 +49,17 @@ class App(QtWidgets.QMainWindow):
         PlotWindow_ = PlotWindow(self)
         PlotWindow_.show()
         self.models.append(PlotWindow_)
-
+        
+    def uploadDataFile(self):
+        options = QtWidgets.QFileDialog.Options()
+        options |= QtWidgets.QFileDialog.DontUseNativeDialog
+        fileName, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Open Data File", "", "All Files (*);;Text Files (*.txt)", options=options)
+        if fileName: # 파일 타입에 따라 다르게 받는 것 구현 예정
+            # 첫 번째 열은 X축, 나머지 열은 Y축 데이터로 생각한다.
+            data = pd.read_csv(fileName, delimiter=' ')
+            self.datas.append(data)
+            print(data.head())
+            
 # Fit에 필요한 변수들을 저장할 Table
 class ParTable(QtWidgets.QMainWindow):
     # 추후 추가할 것 : 테이블 행 추가, 각 행 별로 무슨 모델(lorentzian, drude 등) 쓸지 결정란 추가
@@ -116,8 +130,6 @@ class ParAdjust(QtWidgets.QMainWindow):
             self.slider.setMinimum(int(value-(abs(value)*0.2)))
             self.slider.setMaximum(int(value+(abs(value)*0.2)))
         self.slider.setValue(value)
-        print("minmax updated min:", int(value-(abs(value)*0.2))/RESOL, ".... value :",self.slider.value())
-        
         
 class PlotWindow(QtWidgets.QMainWindow):
     # 추가할 것 : 더블클릭하여 X축, Y축 조절, 데이터 및 모델 추가, 어떤 특성(R, T, sigma 등) 을 그릴지 선택
@@ -126,8 +138,77 @@ class PlotWindow(QtWidgets.QMainWindow):
         super().__init__()
         self.main = main
         uic.loadUi('./ui/Plot.ui', self)
+        self.Canvas = PlotCanvas(self, width=5, height=4)   
+        centralwidget = QtWidgets.QWidget()  # centralWidget으로 사용할 새 위젯 생성
+        layout = QtWidgets.QVBoxLayout()  # centralWidget의 레이아웃을 설정
+        layout.addWidget(self.Canvas)  # 캔버스 추가
+        centralwidget.setLayout(layout)  # 위젯에 레이아웃 설정
+        self.setCentralWidget(centralwidget)  # centralWidget 설정
         
+class PlotCanvas(FigureCanvas):
+
+    def __init__(self, parent=None, width=5, height=4, dpi=100):
+        fig = Figure(figsize=(width, height), dpi=dpi)
+        self.axes = fig.add_subplot(111)
+        FigureCanvas.__init__(self, fig)
+        self.setParent(parent)
+        self.axes.set_xlim(0,5000)
+        self.axes.set_ylim(0,1)
+        self.draw()
+        #self.plot()
+        self.mpl_connect('button_press_event', self.on_double_click) #더블클릭시 수행
+
+    # 그래프 더블클릭 이벤트 정의
+    def on_double_click(self, event):
+        if event.dblclick:
+            self.open_graph_property()
         
+    def open_graph_property(self):
+        self.graphProperty = graphProperty(self)
+        self.graphProperty.show()
+
+
+    def plot(self):
+        self.C = 0
+        self.wp = 300 # 각 파라미터들의 초기값 설정
+        self.g = 100
+        self.w = np.linspace(1,10000, 10000)
+        self.line1, = self.axes.plot(self.w, local_drude_sigma(self.w, drude_sigma(self.w, self.wp, self.g), self.g, self.C))
+        self.axes.set_title('PyQt Matplotlib Example')
+        self.draw()
+        
+    def plot_data(self, x, y):
+        self.line2, = self.axes.plot(x,y)
+        self.draw()
+
+    def update_plot(self, par,  value):
+        if par == 'C' : self.C = value/100
+        elif par == 'wp' : self.wp = value
+        elif par == 'g' : self.g = value
+        self.line1.set_ydata(local_drude_sigma(self.w, drude_sigma(self.w, self.wp, self.g), self.g, self.C))
+        self.draw()
+
+
+class graphProperty(QtWidgets.QDialog):
+    def __init__(self, canvas):
+        super().__init__()
+        self.canvas = canvas
+        uic.loadUi('./ui/graphProperty.ui', self)
+        
+        buttons = self.findChild(QtWidgets.QDialogButtonBox, 'confirmButtonBox')
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+
+    def accept(self):
+        # Update canvas axis range
+        xmin = float(self.Xmin.text())
+        xmax = float(self.Xmax.text())
+        ymin = float(self.Ymin.text())
+        ymax = float(self.Ymax.text())
+        self.canvas.axes.set_xlim(xmin, xmax)
+        self.canvas.axes.set_ylim(ymin, ymax)
+        self.canvas.draw()
+        super().accept()
 
 def main():
     app = QtWidgets.QApplication(sys.argv)

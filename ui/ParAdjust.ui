@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>Parameter Controller</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QFrame" name="ParAdjust">
@@ -67,7 +67,7 @@
       <number>2</number>
      </property>
      <property name="text">
-      <string>Slider</string>
+      <string>Control</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
@@ -96,7 +96,7 @@
      <number>0</number>
     </property>
     <property name="text">
-     <string>Parameter Adjust</string>
+     <string>Parameter Controller</string>
     </property>
     <property name="alignment">
      <set>Qt::AlignCenter</set>

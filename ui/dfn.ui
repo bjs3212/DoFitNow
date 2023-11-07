@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>DoFitNow ver.0.1</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QPushButton" name="modelButton">
@@ -38,6 +38,19 @@
     </property>
     <property name="text">
      <string>Plot</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="uploadButton">
+    <property name="geometry">
+     <rect>
+      <x>360</x>
+      <y>80</y>
+      <width>101</width>
+      <height>51</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Data Upload</string>
     </property>
    </widget>
   </widget>
