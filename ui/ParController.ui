@@ -14,7 +14,7 @@
    <string>Parameter Controller</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QFrame" name="ParAdjust">
+   <widget class="QFrame" name="ParControll">
     <property name="geometry">
      <rect>
       <x>30</x>
@@ -32,7 +32,7 @@
     <property name="lineWidth">
      <number>2</number>
     </property>
-    <widget class="QSlider" name="ParAdjust_Slider">
+    <widget class="QSlider" name="ParController_Slider">
      <property name="geometry">
       <rect>
        <x>20</x>
